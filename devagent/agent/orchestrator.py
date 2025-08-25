@@ -6,6 +6,8 @@ from devagent.core.config import ConfigManager
 from devagent.agent.test_agent import TestGenerationAgent
 from devagent.agent.docs_agent import DocumentationAgent
 from devagent.agent.refactor_agent import RefactoringAgent
+from devagent.agent.generation_agent import GenerationAgent
+from devagent.agent.analysis_agent import AnalysisAgent
 
 
 class AgentOrchestrator:
@@ -21,6 +23,8 @@ class AgentOrchestrator:
             self.agents['test'] = TestGenerationAgent(self.config)
             self.agents['docs'] = DocumentationAgent(self.config)
             self.agents['refactor'] = RefactoringAgent(self.config)
+            self.agents['generate'] = GenerationAgent(self.config)
+            self.agents['analyze'] = AnalysisAgent(self.config)
         except Exception as e:
             # If agents can't be initialized (e.g., missing API keys), create mock versions
             from devagent.llm.providers import MockLLMProvider
@@ -30,6 +34,8 @@ class AgentOrchestrator:
             self.agents['test'] = TestGenerationAgent(mock_config)
             self.agents['docs'] = DocumentationAgent(mock_config)
             self.agents['refactor'] = RefactoringAgent(mock_config)
+            self.agents['generate'] = GenerationAgent(mock_config)
+            self.agents['analyze'] = AnalysisAgent(mock_config)
     
     def execute_task(self, task: Task) -> TaskResult:
         """Execute task using appropriate agent"""

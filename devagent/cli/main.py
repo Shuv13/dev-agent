@@ -187,13 +187,33 @@ def docs(
     try:
         from devagent.agent.orchestrator import AgentOrchestrator
         from devagent.core.interfaces import Task
-        
+        from devagent.context.context_engine import DevAgentContextEngine
+        from pathlib import Path
+
         orchestrator = AgentOrchestrator(config_manager)
         
+        target_file = None
+        target_function = None
+
+        if Path(target).exists() and Path(target).is_file():
+            target_file = target
+        else:
+            # Assume it's a symbol and search for it
+            console.print(f"Searching for symbol '{target}' in the codebase...")
+            context_engine = DevAgentContextEngine(project_path=".")
+            results = context_engine.search_by_text(target, k=1)
+            if results:
+                target_file = results[0].file_path
+                target_function = target
+                console.print(f"Found symbol '{target}' in file: {target_file}")
+            else:
+                console.print(f"[red]Error: Could not find file or symbol '{target}'[/red]")
+                raise typer.Exit(1)
+
         task = Task(
             command="docs",
-            target_file=None,
-            target_function=None,
+            target_file=target_file,
+            target_function=target_function,
             parameters={
                 'target': target,
                 'format': format,
@@ -317,7 +337,55 @@ def generate(
     • devagent generate --prompt="Create a FastAPI endpoint for user management"
     • devagent generate --prompt="Add error handling to this function" --context=src/utils.py
     """
-    console.print("[yellow]Custom generation feature coming soon![/yellow]")
+    try:
+        from devagent.agent.orchestrator import AgentOrchestrator
+        from devagent.core.interfaces import Task
+
+        orchestrator = AgentOrchestrator(config_manager)
+
+        task = Task(
+            command="generate",
+            target_file=None,
+            target_function=None,
+            parameters={
+                'prompt': prompt,
+                'output': output,
+                'context': context
+            },
+            context_requirements=[]
+        )
+
+        result = orchestrator.execute_task(task)
+
+        if result.success:
+            console.print(f"[green]SUCCESS:[/green] {result.output_message}")
+            if result.generated_files:
+                console.print(f"Generated files: {', '.join(result.generated_files)}")
+        else:
+            console.print(f"[red]ERROR:[/red] {result.output_message}")
+            raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"[red]Unexpected error: {e}[/red]")
+        raise typer.Exit(1)
+
+
+@app.command()
+def index(
+    project_path: str = typer.Argument(".", help="Project directory to index"),
+    force: bool = typer.Option(False, "--force", "-f", help="Force re-indexing")
+):
+    """Index the codebase to build context for the agents."""
+    try:
+        from devagent.context.context_engine import DevAgentContextEngine
+
+        console.print(f"Indexing codebase at '{project_path}'...")
+        context_engine = DevAgentContextEngine(project_path)
+        context_engine.index_codebase(force_reindex=force)
+        console.print("[green]Codebase indexed successfully![/green]")
+
+    except Exception as e:
+        console.print(f"[red]Indexing failed: {e}[/red]")
+        raise typer.Exit(1)
 
 
 @app.command()
@@ -334,7 +402,35 @@ def analyze(
     • devagent analyze src/ --complexity --coverage
     • devagent analyze utils.py --suggestions
     """
-    console.print("[yellow]Code analysis feature coming soon![/yellow]")
+    try:
+        from devagent.agent.orchestrator import AgentOrchestrator
+        from devagent.core.interfaces import Task
+
+        orchestrator = AgentOrchestrator(config_manager)
+
+        task = Task(
+            command="analyze",
+            target_file=None,
+            target_function=None,
+            parameters={
+                'target': target,
+                'complexity': complexity,
+                'coverage': coverage,
+                'suggestions': suggestions
+            },
+            context_requirements=[]
+        )
+
+        result = orchestrator.execute_task(task)
+
+        if result.success:
+            console.print(f"[green]ANALYSIS RESULTS:[/green]\n{result.output_message}")
+        else:
+            console.print(f"[red]ERROR:[/red] {result.output_message}")
+            raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"[red]Unexpected error: {e}[/red]")
+        raise typer.Exit(1)
 
 
 if __name__ == "__main__":
