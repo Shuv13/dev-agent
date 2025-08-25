@@ -114,13 +114,18 @@ class RefactoringAgent(Agent):
         else:
             # Apply refactoring
             with open(file_path, 'r') as f:
-                content = f.read()
+                lines = f.readlines()
             
-            # Replace the function in the file
-            new_content = content.replace(original_code, refactored_code)
+            # Replace the function in the file using line numbers
+            start_line = function_analysis.start_line - 1
+            end_line = function_analysis.end_line
+
+            new_lines = lines[:start_line]
+            new_lines.extend(refactored_code.splitlines(True))
+            new_lines.extend(lines[end_line:])
             
             with open(file_path, 'w') as f:
-                f.write(new_content)
+                f.writelines(new_lines)
             
             return TaskResult(
                 success=True,

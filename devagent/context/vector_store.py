@@ -68,14 +68,17 @@ class VectorStore:
                 **chunk.metadata
             }
             
-            # Convert non-string values to strings for ChromaDB
+            # Convert non-primitive values to JSON strings for ChromaDB
             for key, value in metadata.items():
                 if not isinstance(value, (str, int, float, bool)):
-                    if hasattr(value, '__dict__'):
-                        # Handle dataclass objects
-                        metadata[key] = json.dumps(value.__dict__)
-                    else:
-                        metadata[key] = str(value)
+                    try:
+                        metadata[key] = json.dumps(value)
+                    except TypeError:
+                        # Fallback for complex objects that are not directly serializable
+                        if hasattr(value, '__dict__'):
+                            metadata[key] = json.dumps(value.__dict__)
+                        else:
+                            metadata[key] = str(value)
             
             metadatas.append(metadata)
         
